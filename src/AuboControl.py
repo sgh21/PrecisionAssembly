@@ -225,7 +225,7 @@ class AuboController:
         # print(f"The pose of {frame_name} in {refer_frame} is :",pos,ori)
         return pos,ori 
     
-    def movel_tf(self,pos,ori,frame_name="flange_center"):
+    def movel_tf(self,pos,ori,frame_name="flange_center",joint=False):
         ''' 
         move the frame to target pose in the world frame
         pos: list of 3 float[x,y,z]
@@ -253,13 +253,16 @@ class AuboController:
             result = self.robot.inverse_kin(current_joint_state, pos,ori)
             if result is not None:
                 joint_radian = result['joint']
-                return self.robot.move_line(joint_radian)
+                if joint:
+                    return self.robot.move_line(joint_radian)
+                else:
+                    return self.robot.move_joint(joint_radian)
             else:
                 raise ValueError("inverse kinematics failed.")
         except ValueError:
             self.robot.move_stop()
 
-    def movel_relative(self,pos,ori,frame_name="flange_center"):
+    def movel_relative(self,pos,ori,frame_name="flange_center",joint=False):
         '''
         move to the frame to target pose in the self frame
         pos: list of 3 float[x,y,z]
@@ -272,7 +275,7 @@ class AuboController:
         T = self.tf_tree.get_transform("temp","world")
         target_pos,target_ori = self.tf_tree.transform_to_pose(T)#[x,y,z],[x,y,z,w]
         target_ori = quaternion_to_rpy(np.array(target_ori))
-        self.movel_tf(target_pos,target_ori,frame_name)
+        self.movel_tf(target_pos,target_ori,frame_name,joint=joint)
         self.tf_tree.delete_node("temp")
 
     def set_joint_maxacc(self,joint_maxacc):
