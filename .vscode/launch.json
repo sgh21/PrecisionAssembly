@@ -1,0 +1,61 @@
+{
+    "configurations": [
+        {
+            "name": "Python 调试程序: 当前文件",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "cwd": "${fileDirname}",
+            "console": "integratedTerminal"
+        },
+        {
+            "type": "debugpy",
+            "request": "launch",
+            "name": "Launch HandEyeClib",
+            "cwd": "${workspaceFolder}/utils/",
+            "program": "${workspaceFolder}/utils/HandEyeClib.py"
+        },
+        {
+            "type": "debugpy",
+            "request": "launch",
+            "name": "Launch AuboControl",
+            "cwd": "${workspaceFolder}/src/",
+            "program": "${workspaceFolder}/src/AuboControl.py"
+        },
+        {
+            "type": "debugpy",
+            "request": "launch",
+            "name": "Launch EG24BControl",
+            "cwd": "${workspaceFolder}/src/",
+            "program": "${workspaceFolder}/src/EG24BControl.py"
+        },
+        {
+            "type": "debugpy",
+            "request": "launch",
+            "name": "Launch MVScontrol",
+            "cwd": "${workspaceFolder}/src/",
+            "program": "${workspaceFolder}/src/MVScontrol.py"
+        },
+        {
+            "type": "debugpy",
+            "request": "launch",
+            "name": "Launch RoboClient",
+            "cwd": "${workspaceFolder}/src/",
+            "program": "${workspaceFolder}/src/RoboClient.py"
+        },
+        {
+            "type": "debugpy",
+            "request": "launch",
+            "name": "Launch VisionServer",
+            "cwd": "${workspaceFolder}/src/",
+            "program": "${workspaceFolder}/src/VisionServer.py"
+        },
+        {
+            "type": "debugpy",
+            "request": "launch",
+            "name": "Launch DataCollector",
+            "cwd": "${workspaceFolder}/utils/",
+            "program": "${workspaceFolder}/utils/DataCollector.py"
+        }
+    ]
+}
