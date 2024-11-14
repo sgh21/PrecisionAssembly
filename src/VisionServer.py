@@ -439,7 +439,7 @@ def main():
             result = visionserver.process_image_opencv(\
                                     image,yolo_result, \
                                     just_detect = False,\
-                                    debug= True,\
+                                    debug= False,\
                                     area_threshold=8000)
             t5 = cv2.getTickCount()
             # 序列化数

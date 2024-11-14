@@ -253,7 +253,7 @@ class AuboController:
             result = self.robot.inverse_kin(current_joint_state, pos,ori)
             if result is not None:
                 joint_radian = result['joint']
-                if joint:
+                if joint == False:
                     return self.robot.move_line(joint_radian)
                 else:
                     return self.robot.move_joint(joint_radian)

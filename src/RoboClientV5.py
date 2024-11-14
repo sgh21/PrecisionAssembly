@@ -112,7 +112,7 @@ def main():
     vision_port = 2024  # 与服务器端保持一致
     aubo_host = '192.168.70.100'
     aubo_port = 8899
-    gripper_port = 'COM4'
+    gripper_port = 'COM7'
     traget_pose = []
     client = RoboClient(vision_host, vision_port,aubo_host,aubo_port,gripper_port)
     client.aubo.robot.set_end_max_line_acc(0.1)
@@ -145,8 +145,11 @@ def main():
         raise ValueError('无法获取全部物块的位置，请检查相机视野')
     cube0_pos_in_camera , cube0_ori_in_camera = client.get_cube_pose(response,0)  # x,y,theta
     cube1_pos_in_camera , cube1_ori_in_camera = client.get_cube_pose(response,1)
-    cube2_pos_in_camera , cube2_ori_in_camera = client.get_cube_pose(response,2)\
-    
+    cube2_pos_in_camera , cube2_ori_in_camera = client.get_cube_pose(response,2)
+    trans_flag0 = cube0_ori_in_camera[2] < 0
+    trans_flag1 = cube1_ori_in_camera[2] < 0
+    print("cube0_ori_in_camera_before_transform:",cube0_ori_in_camera*180/np.pi)
+    print("cube1_ori_in_camera_before_transform:",cube1_ori_in_camera*180/np.pi)
     # modift the pos and ori to the pose in world
     # 将相机坐标旋转180°到工件坐标，cube0_ori_in_camera是相机坐标系下的物块实际位姿
     cube0_ori_in_camera[2] += np.pi
@@ -163,7 +166,10 @@ def main():
     cube0_ori_in_camera = quaternion_to_rpy(np.array(cube0_ori_in_camera))
     cube1_ori_in_camera = quaternion_to_rpy(np.array(cube1_ori_in_camera))
     cube2_ori_in_camera = quaternion_to_rpy(np.array(cube2_ori_in_camera))
-    
+    print("cube0_ori_in_camera_after_transform:",cube0_ori_in_camera*180/np.pi)
+    print("cube1_ori_in_camera_after_transform:",cube1_ori_in_camera*180/np.pi)
+    # cube0_ori_in_camera[:2]=0
+    # cube1_ori_in_camera[:2]=0
     # 通过以上的这些步骤，已经获得的就是世界坐标系下的物块位姿，但是还没给z赋值
 
 
@@ -190,12 +196,13 @@ def main():
 
     # lzw
     # 对第一个 块0 执行硬定位
-    if cube0_ori_in_camera[2]<-np.pi/2:
+    if trans_flag0:
         offset = np.pi/2
     else:
         offset = -np.pi/2
     client.aubo.robot.set_end_max_line_acc(0.05)
     client.aubo.robot.set_end_max_line_velc(0.05) # 0.15
+    
     # client.aubo.movel_tf(cube0_pos_in_camera,cube0_ori_in_camera,frame_name='gripper_center')  # 我称之为对齐函数，前两个是世界坐标，将gripper的坐标系对齐到世界坐标上
     time.sleep(1)
     safe_dist = np.array([0, 0, 0.05])  # 安全距离
@@ -208,6 +215,9 @@ def main():
     cube0_pos_grasp = cube0_pos_in_camera - another_dist # 抓取位置
     client.aubo.movel_tf(cube0_pos_grasp,cube0_ori_in_camera,frame_name='gripper_center')  # 夹爪移动到物块0的抓取位置
     client.gripper.close_gripper(speed=500, force=100) # 夹爪闭合
+    cube0_pos,cube0_ori = client.aubo.get_pose('gripper_center')
+    client.aubo.tf_tree.add_node("home", "world", cube0_pos, cube0_ori)
+    cube0_ori = quaternion_to_rpy(np.array(cube0_ori))
     time.sleep(1.5)
     client.gripper.open_gripper(speed=500) # 夹爪打开
     # client.aubo.robot.set_end_max_line_acc(0.05)
@@ -216,6 +226,8 @@ def main():
     time.sleep(1)
     client.aubo.robot.set_end_max_line_acc(0.05)
     client.aubo.robot.set_end_max_line_velc(0.20) # 0.15
+    print("cube0_ori_in_camera:", cube0_ori_in_camera*180/np.pi)
+    # print("cube1_ori_another:", cube1_ori_another*180/np.pi)
     client.aubo.movel_relative(np.array([0,0,0]), np.array([0,0,offset]), frame_name='gripper_center')  # 旋转90度（90的正负需要判断）
     client.aubo.robot.set_end_max_line_acc(0.05)
     client.aubo.robot.set_end_max_line_velc(0.05) # 0.15
@@ -225,20 +237,19 @@ def main():
     client.gripper.close_gripper(speed=500, force=100) # 夹爪闭合
     time.sleep(1.5)
     client.gripper.open_gripper(speed=500) # 夹爪打开
-    cube0_pos,cube0_ori = client.aubo.get_pose('gripper_center')
-    client.aubo.tf_tree.add_node("home", "world", cube0_pos, cube0_ori)
-    cube0_ori = quaternion_to_rpy(np.array(cube0_ori))
+    
     client.aubo.movel_relative(- safe_dist - another_dist, np.array([0,0,0]), frame_name='gripper_center')  # 夹爪移动到物块0的安全位置
 
     # 对第二个 块1 执行硬定位
-    if cube1_ori_in_camera[2]<-np.pi/2:
-        offset = np.pi/2
-    else:
+    if trans_flag1:
         offset = -np.pi/2
+    else:
+        offset = np.pi/2
+    print("cube1_offset:", offset*180/np.pi)
     cube1_pos_save = cube1_pos_in_camera + safe_dist  # 安全位置c
     cube1_ori_another = cube1_ori_in_camera + np.array([0,0,offset]) # 另一侧的安全位置的位姿（直接再多转90，90的正负需要判断）
-    # print("cube1_ori_in_camera:", cube1_ori_in_camera*180/np.pi)
-    # print("cube1_ori_another:", cube1_ori_another*180/np.pi)
+    print("cube1_ori_in_camera:", cube1_ori_in_camera*180/np.pi)
+    print("cube1_ori_another:", cube1_ori_another*180/np.pi)
     client.aubo.movel_tf(cube1_pos_save,cube1_ori_another,frame_name='gripper_center', joint=True)  # 夹爪移动到物块1的另一侧安全位置
     client.aubo.movel_relative(safe_dist + another_dist, np.array([0,0,0]), frame_name='gripper_center')  # 夹爪移动到物块1的另一侧抓取位置
     client.gripper.close_gripper(speed=500, force=100) # 夹爪闭合
@@ -274,7 +285,7 @@ def main():
 
     # 抓取块2
     client.aubo.robot.set_end_max_line_acc(0.05)
-    client.aubo.robot.set_end_max_line_velc(0.02) # 0.15
+    client.aubo.robot.set_end_max_line_velc(0.05) # 0.15
     client.aubo.movel_tf(cube2_pos+safe_dist,cube2_ori,'gripper_center')
     client.aubo.movel_tf(cube2_pos,cube2_ori,'gripper_center')
     # time.sleep(1)
@@ -284,7 +295,7 @@ def main():
 
     # 把块2撞到块1上
     Z_cube2_ground = 34.7  # 全是理论值，理论上无需调整
-    Z_gripper2_ground = 10  # 夹爪在末端接触地面时，夹爪中心到地面的高度
+    Z_gripper2_ground = 12  # 夹爪在末端接触地面时，夹爪中心到地面的高度
     pos_slot2home = np.array([-0.01, 0.0, -(Z_cube2_ground - Z_gripper2_ground) / 1000])
     ori_slot2home = np.array([-15 * np.pi / 180, 0, 0])
     ori_slot2home = rpy_to_quaternion(ori_slot2home)
@@ -312,13 +323,13 @@ def main():
     time.sleep(0.5)
     client.aubo.robot.set_end_max_line_acc(0.1)
     client.aubo.robot.set_end_max_line_velc(0.15)
-    client.aubo.movel_tf(pos=init_pos, ori=init_ori, frame_name='flange_center')
+    client.aubo.movel_tf(pos=init_ori, ori=init_ori, frame_name='flange_center')
+    
 
 
-
-
-    client.disconnect()
     client.aubo.disconnect()
+    client.disconnect()
+    
 
 
 if __name__ == '__main__':
