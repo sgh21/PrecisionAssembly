@@ -409,6 +409,26 @@ class VisionServer:
         while not self._stop_warmup:
             # 拍照
             img = capture_frame(self.cam,self.data_buf,self.nPayloadSize)
+            yolo_result = self.process_image_yolo(img,debug=False)
+            modify_angle0 = self.find_circle(img,yolo_result,0,angle=True)*180/np.pi
+            modify_angle1 = self.find_circle(img,yolo_result,1,angle=True)*180/np.pi
+            text = f"modify_angle0:{modify_angle0:.2f},modify_angle1:{modify_angle1:.2f}"
+            # 定义文字位置
+            position = (0, 50)  # (x, y) 坐标
+
+            # 定义字体
+            font = cv2.FONT_HERSHEY_SIMPLEX
+
+            # 定义字体大小
+            font_scale = 2
+
+            # 定义字体颜色 (B, G, R)
+            color = (0, 0, 255)  # 白色
+
+            # 定义字体粗细
+            thickness = 3
+
+           
             # 推理
              # 模型推理
             t1 = cv2.getTickCount()
@@ -417,6 +437,8 @@ class VisionServer:
             print(f'YOLO推理时间：{(t2 - t1) / cv2.getTickFrequency()}s')
             # 初始化结果图像
             img_result = img.copy()
+             # 在图像上绘制文字
+            cv2.putText(img_result, text, position, font, font_scale, color, thickness, cv2.LINE_AA)
             h , w = img.shape[:2]
             # 处理检测结果
             boxes = result.boxes  # 边界框
@@ -434,10 +456,10 @@ class VisionServer:
                 cv2.namedWindow('Warmup', cv2.WINDOW_NORMAL)
                 cv2.resizeWindow('Warmup',1536,1024)
                 cv2.rectangle(img_result, (x1, y1), (x2, y2), color, 2)
-                cv2.imshow('Warmup',img_result)
-                if cv2.waitKey(50) & 0xFF == ord('q'):
-                    cv2.destroyWindow('Warmup')
-                    continue
+            cv2.imshow('Warmup',img_result)
+            if cv2.waitKey(50) & 0xFF == ord('q'):
+                cv2.destroyWindow('Warmup')
+                continue
         print("Stop warming up")
           
 
