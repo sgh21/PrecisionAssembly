@@ -1,4 +1,4 @@
-# client.py
+# add yolo_circle 
 import socket
 import pickle
 import numpy as np
@@ -144,6 +144,14 @@ def main():
     cube0_pos_in_camera , cube0_ori_in_camera = client.get_cube_pose(response,0)  # x,y,theta
     cube1_pos_in_camera , cube1_ori_in_camera = client.get_cube_pose(response,1)
     cube2_pos_in_camera , cube2_ori_in_camera = client.get_cube_pose(response,2)
+    # modify the angle of cube0
+    # if not nesscary, please comment the following code
+    client.send_command('modify_angle0_true')
+    modify_angle0 = client.receive_data()
+    client.send_command('modify_angle1_true')
+    modify_angle1 = client.receive_data()
+    cube0_ori_in_camera[2] += modify_angle0
+    cube1_ori_in_camera[2] += modify_angle1
     trans_flag0 = cube0_ori_in_camera[2] < 0
     trans_flag1 = cube1_ori_in_camera[2] < 0
     trans_flag2 = cube2_ori_in_camera[2] < 0

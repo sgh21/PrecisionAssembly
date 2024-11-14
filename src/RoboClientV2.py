@@ -120,21 +120,21 @@ def main():
     
     Z_camera_ground = NORM_Z*1000+16-6.7  #-6.7
     
-    init_pos = np.array([-0.43322,-0.131482,0.39424])
-    # init_pos = np.array([-0.43322,-0.131482,0.368112])#法兰初始位姿，一定要改！！！
-    init_ori = np.array([180*np.pi/180,0,-90*np.pi/180])
-    client.aubo.movel_tf(pos=init_pos,ori=init_ori,frame_name='flange_center')
-    # camera_init_pos = np.array([-0.54458107,-0.13170145 ,0.38423726])
+    # init_pos = np.array([-0.43322,-0.131482,0.39424])
+    # # init_pos = np.array([-0.43322,-0.131482,0.368112])#法兰初始位姿，一定要改！！！
+    # init_ori = np.array([180*np.pi/180,0,-90*np.pi/180])
+    # client.aubo.movel_tf(pos=init_pos,ori=init_ori,frame_name='flange_center')
+    camera_init_pos = np.array([-0.54458107,-0.13170145 ,0.38423726])
     # camera_init_pos =np.array([-0.54379159,-0.13207375 ,0.35799774])
-    # camera_init_ori = np.array([-180*np.pi/180,0,90*np.pi/180])
-    # client.aubo.movel_tf(pos=camera_init_pos,ori=camera_init_ori,frame_name='camera_center')
-    T_camera2base =client.aubo.tf_tree.get_transform('camera_center','world')  
-    # run this only once
-    camera_init_pos, camera_init_ori = client.aubo.tf_tree.transform_to_pose(T_camera2base)
-    camera_init_ori = quaternion_to_rpy(np.array(camera_init_ori))
-    print("The init pose of camera",camera_init_pos,camera_init_ori)
+    camera_init_ori = np.array([-180*np.pi/180,0,90*np.pi/180])
+    client.aubo.movel_tf(pos=camera_init_pos,ori=camera_init_ori,frame_name='camera_center')
+    # T_camera2base =client.aubo.tf_tree.get_transform('camera_center','world')  
+    # # run this only once
+    # camera_init_pos, camera_init_ori = client.aubo.tf_tree.transform_to_pose(T_camera2base)
+    # camera_init_ori = quaternion_to_rpy(np.array(camera_init_ori))
+    # print("The init pose of camera",camera_init_pos,camera_init_ori)
     
-    time.sleep(1)
+    # time.sleep(1)
     if client.robot_state != ROBOTSTATE['READY_TO_START']:
         raise ValueError('初始化失败，请检查连接')
 

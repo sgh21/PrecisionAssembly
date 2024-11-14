@@ -145,14 +145,60 @@ class VisionServer:
                             /(centers[0][1]-centers[1][0]))<= 0.3
         if is_vertical:
             return 0
-        # 圆心连线基本和水平轴平行，需要旋转±90 如果圆心连线在上，则正转，否则反转
+        # 圆心连线基本和水平轴平行，需要旋转±90 如果圆心连线在上，则反转，否则正转
         is_upper = (centers[0][1]+centers[1][1])/2 >= (y1_b + y2_b)/2
         if is_upper:
             return -1
         
         return 1
+    def is_in_range_with_angle(self, boxes, boundingbox, num=2):
+        """
+        判断有多少个 boxes 的中心在 boundingbox 内
+        参数：
+        - boxes: 检测到的边界框列表
+        - boundingbox: 目标边界框，格式为 [x1, y1, x2, y2]
+        - num: 判断的阈值，默认值为 2
+        返回：
+        - bool: 如果在 boundingbox 内的 boxes 数量等于 num，返回 True，否则返回 False
+        """
+        count = 0
+        center = np.zeros(2)
+        x1_b, y1_b, x2_b, y2_b = boundingbox
+        centers = []
+        for i in range(len(boxes)):
+            # 获取边界框坐标并转换为整数
+            center = np.zeros(2)
+            x1, y1, x2, y2 = boxes.xyxy[i].cpu().numpy().astype(int)
+            center[0] = (x1 + x2) / 2
+            center[1] = (y1 + y2) / 2
+
+            # 判断中心点是否在 boundingbox 内
+            if x1_b <= center[0] <= x2_b and y1_b <= center[1] <= y2_b:
+                count += 1
+                centers.append(center)
+        # 没有找到足够的圆心        
+        if count != num:
+            return None
+        
+        middle_point = (centers[0]+centers[1])/2
+        box_center = np.array([(x1_b+x2_b)/2,(y1_b+y2_b)/2])
+        judege_vector = box_center - middle_point # 保证初始和相机水平轴夹角为0
+        judege_theta = np.arctan2(judege_vector[1],judege_vector[0])
+        # 判断是否在正负45度范围内，如果在则不需要旋转
+        is_in_range_normal = np.abs(judege_theta) <= np.pi/4
+        if is_in_range_normal:
+            return 0
+        # 判断是否大于45度，如果大于45度则正转
+        is_more =  np.pi/4 < judege_theta <= 3* np.pi/4
+        if is_more:
+            return 1
+        is_less = -3*np.pi/4 <= judege_theta < -np.pi/4
+        # 判断是否小于45度，如果小于45度则反转
+        if is_less:
+            return -1
+        raise ValueError('Can not find the right angle')
     
-    def find_circle(self,img,result_objs,cls):
+    def find_circle(self,img,result_objs,cls,angle = False):
         circle_found = False
         boundingbox = np.zeros(4)
         while not circle_found:
@@ -160,7 +206,10 @@ class VisionServer:
             boxes = result.boxes
             obj:VisionObject = [obj for obj in result_objs if obj.cls == cls][0]
             boundingbox = obj.xyxy 
-            modify_angle = self.is_in_range(boxes,boundingbox,num=2)
+            if angle==False:
+                modify_angle = self.is_in_range(boxes,boundingbox,num=2)
+            else:
+                modify_angle = self.is_in_range_with_angle(boxes,boundingbox,num=2)
             if  modify_angle is not None:
                 circle_found = True
                 return modify_angle*np.pi/2
@@ -474,6 +523,35 @@ def main():
             image = capture_frame(visionserver.cam,visionserver.data_buf,visionserver.nPayloadSize)
             yolo_result = visionserver.process_image_yolo(image,debug=False)
             modify_angle = visionserver.find_circle(image,yolo_result,1)
+            if modify_angle is not None:
+                # 序列化数
+                data_to_send = pickle.dumps(modify_angle)
+                # 发送数据长度
+                conn.sendall(len(data_to_send).to_bytes(4, byteorder='big'))
+                # 发送数据
+                conn.sendall(data_to_send)
+                print('处理结果已发送给客户端')
+                print('The modify angle should be:',modify_angle*180/np.pi)
+
+        elif command == 'modify_angle0_true':
+            image = capture_frame(visionserver.cam,visionserver.data_buf,visionserver.nPayloadSize)
+            yolo_result = visionserver.process_image_yolo(image,debug=False)
+            modify_angle = visionserver.find_circle(image,yolo_result,0,angle=True)
+            if modify_angle is not None:
+                # 序列化数
+                data_to_send = pickle.dumps(modify_angle)
+                # 发送数据长度
+                conn.sendall(len(data_to_send).to_bytes(4, byteorder='big'))
+                # 发送数据
+                conn.sendall(data_to_send)
+                print('处理结果已发送给客户端')
+                print('The modify angle should be:',modify_angle*180/np.pi)
+            else:
+                raise ValueError('Can not find the right modify angle')
+        elif command == 'modify_angle1_true':
+            image = capture_frame(visionserver.cam,visionserver.data_buf,visionserver.nPayloadSize)
+            yolo_result = visionserver.process_image_yolo(image,debug=False)
+            modify_angle = visionserver.find_circle(image,yolo_result,1,angle=True)
             if modify_angle is not None:
                 # 序列化数
                 data_to_send = pickle.dumps(modify_angle)
