@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 # lower_bound 和 upper_bound 是用于提取前景的阈值，最好不要太低，防止丢失关键信息，调整时还需要联动tileGridSize保证局部不过曝
-def enhance_contrast(img,lower_bound=0,upper_bound= 100,clipLimit = 2.0,tileGridSize =(64,64),show = False):
+def enhance_contrast(img,lower_bound=0,upper_bound= 105,clipLimit = 2.0,tileGridSize =(64,64),show = False):
         gray = img.copy()
         if len(gray.shape) != 2:
             raise ValueError("输入图像必须是灰度图像")

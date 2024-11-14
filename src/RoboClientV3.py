@@ -266,7 +266,7 @@ def main():
     # take 2 to 1
 
     Z_cube2_ground = 34.7  # 全是理论值，理论上无需调整
-    Z_gripper2_ground = 10 # 夹爪在末端接触地面时，夹爪中心到地面的高度
+    Z_gripper2_ground = 9 # 夹爪在末端接触地面时，夹爪中心到地面的高度
     pos_slot2home = np.array([-0.01,0.0,-(Z_cube2_ground-Z_gripper2_ground)/1000])
     ori_slot2home = np.array([-15*np.pi/180,0,0])
     ori_slot2home = rpy_to_quaternion(ori_slot2home)
@@ -295,7 +295,7 @@ def main():
     client.aubo.tf_tree.delete_node("slot_offset")
     client.aubo.tf_tree.delete_node("slot")
 
-    client.disconnect()
+    client.disconnect() 
     client.aubo.disconnect()
 
 

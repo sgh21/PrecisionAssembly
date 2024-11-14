@@ -88,8 +88,8 @@ if __name__ == "__main__":
     for i in range(trans_num):
         norm_z +=v_trans[i][2]/trans_num
     print("The NORM_Z should be about:",norm_z)
-    T_flange2base = np.load(f"{img_dir}/flange2base.npy")[9:]
-    indices = []
+    # T_flange2base = np.load(f"{img_dir}/flange2base.npy")[9:]
+    # indices = []
     
     
     # T_flange2base = np.zeros((v_rot.shape[0],4,4))
