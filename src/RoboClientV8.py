@@ -122,9 +122,9 @@ def main():
     # 设置交融半径
     client.aubo.robot.set_blend_radius(0.01)
     # 在这里定义三个速度
-    a = 0.2
-    v_normal = 0.15 # 正常移动
-    v_spin = 0.3
+    a = 0.15
+    v_normal = 0.1 # 正常移动
+    v_spin = 0.2
     v_insert = 0.05 # 插入速度
     grasp_speed = 1000
     client.aubo.robot.set_end_max_line_acc(a)

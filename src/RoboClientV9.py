@@ -286,11 +286,6 @@ def main():
     client.aubo.movel_tf(cube2_pos_grasp,cube2_ori_another,frame_name='gripper_center', joint=True)  # 夹爪移动到物块1的安全位置(正常的抓取角度)（90的正负需要判断）
     client.gripper.close_gripper(speed=grasp_speed, force=100) # 夹爪闭合
     time.sleep(0.4)
-    client.gripper.open_gripper(speed=grasp_speed) # 夹爪打开
-    client.aubo.movel_tf(cube2_pos_grasp,cube2_ori_in_camera,frame_name='gripper_center',joint=True)  # 夹爪移动到物块2的另一侧安全位置
-    # client.gripper.open_gripper(speed=500) # 夹爪打开
-    client.gripper.close_gripper(speed=grasp_speed, force=100) # 夹爪闭合
-    time.sleep(0.4)
     client.aubo.movel_relative(- safe_dist - another_dist, np.array([0,0,0]), frame_name='gripper_center')  # 夹爪移动到物块2的安全位置
    
 
@@ -301,10 +296,11 @@ def main():
     ori_slot2home = np.array([-15 * np.pi / 180, 0, 0])
     ori_slot2home = rpy_to_quaternion(ori_slot2home)
     slot_offset = np.array([0.0, 0.0, 0.0075])# 和抓取的深度有关，对应不同的抓取位置需要调整
-
+    ori_slotoffset2slot = np.array([0, 0, -offset])
+    ori_slotoffset2slot = rpy_to_quaternion(ori_slotoffset2slot)
     client.aubo.tf_tree.add_node("slot", "home", pos_slot2home, ori_slot2home)
-    client.aubo.tf_tree.add_node("slot_offset", "slot", -slot_offset, np.array([0, 0, 0, 1]))
-    client.aubo.tf_tree.add_node("safe_slot", "slot", -safe_dist, np.array([0, 0, 0, 1]))
+    client.aubo.tf_tree.add_node("slot_offset", "slot", -slot_offset, ori_slotoffset2slot)
+    client.aubo.tf_tree.add_node("safe_slot", "slot", -safe_dist, ori_slotoffset2slot)
     slot_pos,slot_ori = client.aubo.get_pose('slot_offset','world')
     slot_ori = quaternion_to_rpy(np.array(slot_ori))
     safe_slot_pos,safe_slot_ori = client.aubo.get_pose('safe_slot','world')

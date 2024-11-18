@@ -107,6 +107,7 @@ class VisionServer:
             result_obj.image = img_result
             result_obj.xyxy = np.array([x1, y1, x2, y2])
             result_obj.roi_img = roi_img
+            # result_obj.roi_mask = masks[i]
             result_obj.cls = cls
             result_objs.append(result_obj)
 
@@ -409,7 +410,9 @@ class VisionServer:
         while not self._stop_warmup:
             # 拍照
             img = capture_frame(self.cam,self.data_buf,self.nPayloadSize)
+            print("Capture image")
             yolo_result = self.process_image_yolo(img,debug=False)
+            print("YOLO detect")
             if len(yolo_result) >= 3:
                 modify_angle0 = self.find_circle(img,yolo_result,0,angle=True)*180/np.pi
                 modify_angle1 = self.find_circle(img,yolo_result,1,angle=True)*180/np.pi
@@ -459,7 +462,7 @@ class VisionServer:
                 cv2.resizeWindow('Warmup',1536,1024)
                 cv2.rectangle(img_result, (x1, y1), (x2, y2), color, 2)
             cv2.imshow('Warmup',img_result)
-            if cv2.waitKey(50) & 0xFF == ord('q'):
+            if cv2.waitKey(1000) & 0xFF == ord('q'):
                 cv2.destroyWindow('Warmup')
                 continue
         print("Stop warming up")
@@ -528,6 +531,34 @@ def main():
             print(f'OpenCV处理时间：{(t5 - t4) / cv2.getTickFrequency()}s')
             print(f'数据传输时间：{(t2 - t5) / cv2.getTickFrequency()}s')
 
+        if command == 'capture_yolo':
+            t1 = cv2.getTickCount()
+            # 进行图像处理
+            # result = capture_frame(cam,data_buf,nPayloadSize,'test',targrt_dir=save_dir,show = False)
+            # image = cv2.imread(f'{workspace}/dataset/test_images/capture0_0_1.jpg')
+            image = capture_frame(visionserver.cam,visionserver.data_buf,visionserver.nPayloadSize)
+            t3 = cv2.getTickCount()
+            # 处理图像
+            yolo_result = visionserver.process_image_yolo(image,debug=False)
+            t4 = cv2.getTickCount()
+            result = visionserver.process_image_opencv(\
+                                    image,yolo_result, \
+                                    just_detect = False,\
+                                    debug= False,\
+                                    area_threshold=8000)
+            t5 = cv2.getTickCount()
+            # 序列化数
+            data_to_send = pickle.dumps(result)
+            # 发送数据长度
+            conn.sendall(len(data_to_send).to_bytes(4, byteorder='big'))
+            # 发送数据
+            conn.sendall(data_to_send)
+            print('处理结果已发送给客户端')
+            t2 = cv2.getTickCount()
+            print(f'Capture处理时间：{(t3 - t1) / cv2.getTickFrequency()}s')
+            print(f'YOLO处理时间：{(t4 - t3) / cv2.getTickFrequency()}s')
+            print(f'OpenCV处理时间：{(t5 - t4) / cv2.getTickFrequency()}s')
+            print(f'数据传输时间：{(t2 - t5) / cv2.getTickFrequency()}s')
         elif command == 'modify_angle0':
             image = capture_frame(visionserver.cam,visionserver.data_buf,visionserver.nPayloadSize)
             yolo_result = visionserver.process_image_yolo(image,debug=False)
