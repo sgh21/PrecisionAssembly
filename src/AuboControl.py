@@ -278,6 +278,45 @@ class AuboController:
         self.movel_tf(target_pos,target_ori,frame_name,joint=joint)
         self.tf_tree.delete_node("temp")
 
+    def move_trajectory(self,waypoints,frame_name = 'flange_center',type=RobotMoveTrackType.CARTESIAN_MOVEP):
+        '''
+        waypoints: list of dict [{'pos':[x,y,z],'ori':[roll,pitch,yaw]},...]
+        type: RobotMoveTrackType
+        '''
+        if not self.tf_init:
+            self.init_tf_tree()
+        self.update_flange_center()
+        if frame_name not in self.tf_tree.nodes:
+            raise ValueError(f"Frame node {frame_name} not found.")
+        
+        for waypoint in waypoints:
+            pos = waypoint['pos']
+            ori = waypoint['ori']
+            ori = rpy_to_quaternion(np.array(ori)) #[x,y,z,w]
+            # 更新target节点的位姿
+            self.tf_tree.update_node("target",pos,ori)
+            # 将frame_name和target的位姿重合，解算flange_center对世界的位姿
+            T_flange2frame = self.tf_tree.get_transform("flange_center",frame_name)
+            T_target2world = self.tf_tree.get_transform("target","world")
+            T = T_target2world @ T_flange2frame
+            pos,ori = self.tf_tree.transform_to_pose(T)#[x,y,z],[x,y,z,w]
+            
+            current_joint_state = self.get_current_waypoint()['joint']
+
+            try:
+                self.tf_tree.update_node("flange_center",pos,ori)#[x,y,z,w]
+                ori = standard_to_quaternion(ori) #[w,x,y,z]
+                joint_radian = self.robot.inverse_kin(current_joint_state, pos,ori)['joint']
+                if joint_radian is not None:
+                    self.robot.add_waypoint(joint_radian)
+                else:
+                    raise ValueError("inverse kinematics failed.")
+            except ValueError:
+                self.robot.move_stop()
+        
+        self.robot.move_track(track=type)
+    
+        return self.robot.remove_all_waypoint()
     def set_joint_maxacc(self,joint_maxacc):
         return self.robot.set_joint_maxacc(joint_maxacc)
     def set_joint_maxvelc(self,joint_maxvelc):

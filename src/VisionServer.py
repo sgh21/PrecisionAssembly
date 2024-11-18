@@ -410,9 +410,10 @@ class VisionServer:
             # 拍照
             img = capture_frame(self.cam,self.data_buf,self.nPayloadSize)
             yolo_result = self.process_image_yolo(img,debug=False)
-            modify_angle0 = self.find_circle(img,yolo_result,0,angle=True)*180/np.pi
-            modify_angle1 = self.find_circle(img,yolo_result,1,angle=True)*180/np.pi
-            text = f"modify_angle0:{modify_angle0:.2f},modify_angle1:{modify_angle1:.2f}"
+            if len(yolo_result) >= 3:
+                modify_angle0 = self.find_circle(img,yolo_result,0,angle=True)*180/np.pi
+                modify_angle1 = self.find_circle(img,yolo_result,1,angle=True)*180/np.pi
+                text = f"modify_angle0:{modify_angle0:.2f},modify_angle1:{modify_angle1:.2f}"
             # 定义文字位置
             position = (0, 50)  # (x, y) 坐标
 
@@ -437,8 +438,9 @@ class VisionServer:
             print(f'YOLO推理时间：{(t2 - t1) / cv2.getTickFrequency()}s')
             # 初始化结果图像
             img_result = img.copy()
-             # 在图像上绘制文字
-            cv2.putText(img_result, text, position, font, font_scale, color, thickness, cv2.LINE_AA)
+            if len(yolo_result) >= 3:
+                # 在图像上绘制文字
+                cv2.putText(img_result, text, position, font, font_scale, color, thickness, cv2.LINE_AA)
             h , w = img.shape[:2]
             # 处理检测结果
             boxes = result.boxes  # 边界框

@@ -117,13 +117,14 @@ def main():
     client = RoboClient(vision_host, vision_port,aubo_host,aubo_port,gripper_port)
 
     # 设置最大速度
-    client.aubo.robot.set_joint_maxacc(joint_maxacc=(2.4, 2.4, 2.4, 2.4, 2.4, 2.4))
+    client.aubo.robot.set_joint_maxacc(joint_maxacc=(1.57, 1.57, 1.57, 1.57, 1.57, 1.57))
     client.aubo.robot.set_joint_maxvelc(joint_maxvelc=(2.4, 2.4, 2.4, 2.4, 2.4, 2.4))
-
+    # 设置交融半径
+    client.aubo.robot.set_blend_radius(0.01)
     # 在这里定义三个速度
-    a = 0.3
-    v_normal = 0.4 # 正常移动
-    v_spin = 0.6
+    a = 0.2
+    v_normal = 0.15 # 正常移动
+    v_spin = 0.3
     v_insert = 0.05 # 插入速度
     grasp_speed = 1000
     client.aubo.robot.set_end_max_line_acc(a)
@@ -186,6 +187,7 @@ def main():
     another_dist = np.array([0, 0, 0.005])
     gripper_init_pos ,gripper_init_ori = client.aubo.get_pose('gripper_center')
     gripper_init_ori = quaternion_to_rpy(np.array(gripper_init_ori))
+
     cube0_pos_save = cube0_pos_in_camera + safe_dist  # 安全位置c
     cube0_pos_grasp = cube0_pos_in_camera - another_dist # 抓取位置
     waypoints = []
@@ -193,12 +195,6 @@ def main():
     waypoints.append({'pos':cube0_pos_save,'ori':cube0_ori_in_camera})
     waypoints.append({'pos':cube0_pos_grasp,'ori':cube0_ori_in_camera})
     client.aubo.move_trajectory(waypoints,frame_name='gripper_center')
-    # cube0_pos_save = cube0_pos_in_camera + safe_dist  # 安全位置c
-    # client.aubo.movel_tf(cube0_pos_save,cube0_ori_in_camera,frame_name='gripper_center')  # 夹爪移动到物块0的安全位置
-    # time.sleep(1)
-
-    # cube0_pos_grasp = cube0_pos_in_camera - another_dist # 抓取位置
-    # client.aubo.movel_tf(cube0_pos_grasp,cube0_ori_in_camera,frame_name='gripper_center')  # 夹爪移动到物块0的抓取位置
     client.gripper.close_gripper(speed=grasp_speed, force=100) # 夹爪闭合
     time.sleep(0.4)
     cube0_pos,cube0_ori = client.aubo.get_pose('gripper_center')
@@ -219,21 +215,33 @@ def main():
     time.sleep(0.4)
     client.gripper.open_gripper(speed=grasp_speed) # 夹爪打开
     
-    client.aubo.movel_relative(- safe_dist - another_dist, np.array([0,0,0]), frame_name='gripper_center')  # 夹爪移动到物块0的安全位置
+    
 
     # 对第二个 块1 执行硬定位
     if trans_flag1:
         offset = -np.pi/2
     else:
         offset = np.pi/2
+    gripper_init_pos ,gripper_init_ori = client.aubo.get_pose('gripper_center')
+    gripper_init_ori = quaternion_to_rpy(np.array(gripper_init_ori))
+
+    cube0_pos_save = cube0_pos_save  # 安全位置c
+    
     cube1_pos_save = cube1_pos_in_camera + safe_dist  # 安全位置c
     cube1_ori_another = cube1_ori_in_camera + np.array([0,0,offset]) # 另一侧的安全位置的位姿（直接再多转90，90的正负需要判断）
-    client.aubo.robot.set_end_max_line_acc(a)
-    client.aubo.robot.set_end_max_line_velc(v_spin) # 0.15
-    client.aubo.movel_tf(cube1_pos_save,cube1_ori_another,frame_name='gripper_center', joint=True)  # 夹爪移动到物块1的另一侧安全位置
-    client.aubo.robot.set_end_max_line_acc(a)
-    client.aubo.robot.set_end_max_line_velc(v_normal) # 0.15
-    client.aubo.movel_relative(safe_dist + another_dist, np.array([0,0,0]), frame_name='gripper_center')  # 夹爪移动到物块1的另一侧抓取位置
+    interpolation_pos = (cube0_pos_save+cube1_pos_save)/2
+    interpolation_ori = (cube0_ori_in_camera + cube1_ori_another)/2
+    cube1_pos_grasp = cube1_pos_in_camera - another_dist # 抓取位置
+    cube1_ori_grasp = cube1_ori_another
+
+    waypoints = []
+    waypoints.append({'pos':gripper_init_pos,'ori':gripper_init_ori})
+    waypoints.append({'pos':cube0_pos_save,'ori':cube0_ori_in_camera})
+    # waypoints.append({'pos':interpolation_pos,'ori':interpolation_ori})
+    waypoints.append({'pos':cube1_pos_save,'ori':cube1_ori_another})
+    waypoints.append({'pos':cube1_pos_grasp,'ori':cube1_ori_grasp})
+    print(waypoints)
+    client.aubo.move_trajectory(waypoints,frame_name='gripper_center')
     client.gripper.close_gripper(speed=grasp_speed, force=100) # 夹爪闭合
     time.sleep(0.4)
     client.gripper.open_gripper(speed=grasp_speed) # 夹爪打开
@@ -248,34 +256,52 @@ def main():
     client.gripper.close_gripper(speed=grasp_speed, force=100) # 夹爪闭合
     time.sleep(0.4)
     
-    client.aubo.movel_relative(- safe_dist - another_dist, np.array([0,0,0]), frame_name='gripper_center')  # 夹爪移动到物块1的安全位置
+    gripper_init_pos ,gripper_init_ori = client.aubo.get_pose('gripper_center')
+    gripper_init_ori = quaternion_to_rpy(np.array(gripper_init_ori))
 
+    interpolation_pos = (cube1_pos_save+cube0_pos_save)/2
+    interpolation_ori = (cube0_ori_in_camera + cube1_ori_in_camera)/2
+    waypoints = []
+    waypoints.append({'pos':gripper_init_pos,'ori':gripper_init_ori})
+    waypoints.append({'pos':cube1_pos_save,'ori':cube1_ori_in_camera})
+    # waypoints.append({'pos':interpolation_pos,'ori':interpolation_ori})
+    waypoints.append({'pos':cube0_pos_save,'ori':cube0_ori_in_camera})
+    client.aubo.move_trajectory(waypoints,frame_name='gripper_center')
     # 把块1装入块0
-    client.aubo.movel_tf(cube0_pos+safe_dist,cube0_ori,frame_name='gripper_center')  # 夹爪移动到物块0的上方
     client.aubo.robot.set_end_max_line_acc(a)
     client.aubo.robot.set_end_max_line_velc(v_insert) # 0.15
     cube0_pos_insert = cube0_pos
     cube0_pos_insert[2] += 0.02  # 这个得调
     client.aubo.movel_tf(cube0_pos_insert, cube0_ori, frame_name='gripper_center') # 夹爪移动到装配位
     client.gripper.open_gripper(speed=grasp_speed)  # 夹爪打开
-    client.aubo.robot.set_end_max_line_acc(a)
-    client.aubo.robot.set_end_max_line_velc(v_normal) # 0.15
-    client.aubo.movel_tf(cube0_pos+safe_dist,cube0_ori,frame_name='gripper_center')  # 夹爪移动到物块0的上方
 
-
+    
     # 对第二个 块2 执行硬定位
     if trans_flag2:
         offset = -np.pi/2
     else:
         offset = np.pi/2
     another_dist = np.array([0, 0, 0.002]) # 调整物块的抓取高度
+    client.aubo.robot.set_end_max_line_acc(a) 
+    client.aubo.robot.set_end_max_line_velc(v_normal) # 0.15
+    gripper_init_pos ,gripper_init_ori = client.aubo.get_pose('gripper_center')
+    gripper_init_ori = quaternion_to_rpy(np.array(gripper_init_ori))
+    
+    
     cube2_pos_save = cube2_pos_in_camera + safe_dist  # 安全位置c
     cube2_pos_grasp = cube2_pos_in_camera - another_dist # 抓取位置
     cube2_ori_another = cube2_ori_in_camera + np.array([0,0,offset]) # 另一侧的安全位置的位姿（直接再多转90，90的正负需要判断）
-    client.aubo.robot.set_end_max_line_acc(a)
-    client.aubo.robot.set_end_max_line_velc(v_normal) # 0.15
-    client.aubo.movel_tf(cube2_pos_save,cube2_ori_in_camera,frame_name='gripper_center')  # 夹爪移动到物块2的另一侧安全位置
-    client.aubo.movel_relative(safe_dist + another_dist, np.array([0,0,0]), frame_name='gripper_center')  # 夹爪移动到物块2的另一侧抓取位置
+    
+    interpolation_pos = (cube0_pos_save+cube2_pos_save)/2
+    interpolation_ori = (cube0_ori_in_camera + cube2_ori_in_camera)/2
+    waypoints = []
+    waypoints.append({'pos':gripper_init_pos,'ori':gripper_init_ori})
+    waypoints.append({'pos':cube0_pos_save,'ori':cube0_ori_in_camera})
+    # waypoints.append({'pos':interpolation_pos,'ori':interpolation_ori})
+    waypoints.append({'pos':cube2_pos_save,'ori':cube2_ori_in_camera})
+    waypoints.append({'pos':cube2_pos_grasp,'ori':cube2_ori_in_camera})
+    client.aubo.move_trajectory(waypoints,frame_name='gripper_center')
+
     client.gripper.close_gripper(speed=grasp_speed, force=100) # 夹爪闭合
     time.sleep(0.4)
     client.gripper.open_gripper(speed=grasp_speed) # 夹爪打开
