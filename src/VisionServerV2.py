@@ -150,13 +150,13 @@ class VisionServer:
         is_vertical = np.abs((centers[0][0]-centers[1][0])\
                             /(centers[0][1]-centers[1][0]))<= 0.3
         if is_vertical:
-            return [0]
+            return 0
         # 圆心连线基本和水平轴平行，需要旋转±90 如果圆心连线在上，则反转，否则正转
         is_upper = (centers[0][1]+centers[1][1])/2 >= (y1_b + y2_b)/2
         if is_upper:
-            return [-1]
+            return -1
         
-        return [1]
+        return 1
     def is_in_range_with_angle(self, boxes, boundingbox, num=2):
         """
         判断有多少个 boxes 的中心在 boundingbox 内
@@ -190,28 +190,29 @@ class VisionServer:
         box_center = np.array([(x1_b+x2_b)/2,(y1_b+y2_b)/2])
         judege_vector = box_center - middle_point # 保证初始和相机水平轴夹角为0
         judege_theta = np.arctan2(judege_vector[1],judege_vector[0])
-        # 判断是否在正负45度范围内，如果在则不需要旋转
-        is_in_range_normal = np.abs(judege_theta) <= np.pi/4
-        if is_in_range_normal:
-            if judege_theta > 0:
-                return [0,0]
-            else:
-                return [0,1]
-        # 判断是否大于45度，如果大于45度则正转
-        is_more =  np.pi/4 < judege_theta <= 3* np.pi/4
-        if is_more:
-            if judege_theta <= np.pi/2:
-                return [1,0]
-            else:
-                return [1,3]
-        is_less = -3*np.pi/4 <= judege_theta < -np.pi/4
-        # 判断是否小于45度，如果小于45度则反转
-        if is_less:
-            if judege_theta >= -np.pi/2:
-                return [-1,1]
-            else:
-                return [-1,2]
-        raise ValueError('Can not find the right angle')
+        return judege_theta/(np.pi/2)
+        # # 判断是否在正负45度范围内，如果在则不需要旋转
+        # is_in_range_normal = np.abs(judege_theta) <= np.pi/4
+        # if is_in_range_normal:
+        #     if judege_theta > 0:
+        #         return [0,0]
+        #     else:
+        #         return [0,1]
+        # # 判断是否大于45度，如果大于45度则正转
+        # is_more =  np.pi/4 < judege_theta <= 3* np.pi/4
+        # if is_more:
+        #     if judege_theta <= np.pi/2:
+        #         return [1,0]
+        #     else:
+        #         return [1,3]
+        # is_less = -3*np.pi/4 <= judege_theta < -np.pi/4
+        # # 判断是否小于45度，如果小于45度则反转
+        # if is_less:
+        #     if judege_theta >= -np.pi/2:
+        #         return [-1,1]
+        #     else:
+        #         return [-1,2]
+        # raise ValueError('Can not find the right angle')
     
     def find_circle(self,img,result_objs,cls,angle = False):
         circle_found = False
@@ -227,7 +228,7 @@ class VisionServer:
                 modify_angle = self.is_in_range_with_angle(boxes,boundingbox,num=2)
             if  modify_angle is not None:
                 circle_found = True
-                modify_angle[0] =  modify_angle[0]*np.pi/2
+                modify_angle =  modify_angle*np.pi/2
                 return modify_angle
             img = capture_frame(self.cam,self.data_buf,self.nPayloadSize)
         return None
@@ -436,14 +437,23 @@ class VisionServer:
             img = capture_frame(self.cam,self.data_buf,self.nPayloadSize)
             print("Capture image")
             yolo_result = self.process_image_yolo(img,debug=False)
-            print("YOLO detect")
+            result = self.process_image_opencv(\
+                                    img,\
+                                    yolo_result, \
+                                    just_detect = False,\
+                                    debug= False,\
+                                    area_threshold=8000
+            )
+            
+            
             if len(yolo_result) >= 3:
                 modify_angle0 = self.find_circle(img,yolo_result,0,angle=True)
                 modify_angle1 = self.find_circle(img,yolo_result,1,angle=True)
-                text = f"modify_angle0:{modify_angle0[0]*180/np.pi:.2f},{modify_angle0[1]},modify_angle1:{modify_angle1[0]*180/np.pi:.2f},{modify_angle1[1]}"
+                text_cv = f"The angle detect by cv is:cube0 {result[0][2]:.2f}, cube1 {result[1][-2]:.2f}, cube2 {result[2][-2]:.2f}"
+                text = f"modify_angle0:{modify_angle0*180/np.pi:.2f},modify_angle1:{modify_angle1*180/np.pi:.2f}"
             # 定义文字位置
             position = (0, 50)  # (x, y) 坐标
-
+            position_cv = (0,150)
             # 定义字体
             font = cv2.FONT_HERSHEY_SIMPLEX
 
@@ -468,6 +478,7 @@ class VisionServer:
             if len(yolo_result) >= 3:
                 # 在图像上绘制文字
                 cv2.putText(img_result, text, position, font, font_scale, color, thickness, cv2.LINE_AA)
+                cv2.putText(img_result, text_cv, position_cv, font, font_scale, color, thickness, cv2.LINE_AA)
             h , w = img.shape[:2]
             # 处理检测结果
             boxes = result.boxes  # 边界框
@@ -595,7 +606,7 @@ def main():
                 # 发送数据
                 conn.sendall(data_to_send)
                 print('处理结果已发送给客户端')
-                print('The modify angle should be:',modify_angle[0]*180/np.pi)
+                print('The modify angle should be:',modify_angle*180/np.pi)
             else:
                 raise ValueError('Can not find the right modify angle')
         elif command == 'modify_angle1':
@@ -610,7 +621,7 @@ def main():
                 # 发送数据
                 conn.sendall(data_to_send)
                 print('处理结果已发送给客户端')
-                print('The modify angle should be:',modify_angle[0]*180/np.pi)
+                print('The modify angle should be:',modify_angle*180/np.pi)
 
         elif command == 'modify_angle0_true':
             image = capture_frame(visionserver.cam,visionserver.data_buf,visionserver.nPayloadSize)
@@ -624,7 +635,7 @@ def main():
                 # 发送数据
                 conn.sendall(data_to_send)
                 print('处理结果已发送给客户端')
-                print('The modify angle should be:',modify_angle[0]*180/np.pi)
+                print('The modify angle should be:',modify_angle*180/np.pi)
             else:
                 raise ValueError('Can not find the right modify angle')
         elif command == 'modify_angle1_true':
@@ -639,7 +650,7 @@ def main():
                 # 发送数据
                 conn.sendall(data_to_send)
                 print('处理结果已发送给客户端')
-                print('The modify angle should be:',modify_angle[0]*180/np.pi)
+                print('The modify angle should be:',modify_angle*180/np.pi)
             else:
                 raise ValueError('Can not find the right modify angle')
         

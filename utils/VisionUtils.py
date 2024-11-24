@@ -10,9 +10,10 @@ def enhance_contrast(img,lower_bound=0,upper_bound= 105,clipLimit = 2.0,tileGrid
         # 提取掩码范围内的部分
         extracted = cv2.bitwise_and(gray, gray, mask=mask)
         # 对提取的部分进行均衡化
-        # equalized = cv2.equalizeHist(extracted)
+        equalized = cv2.equalizeHist(extracted)
         clahe = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
         equalized = clahe.apply(extracted)
+        # equalized = extracted.copy()
         # equalized = extracted.copy()
         # 将均衡化后的部分合并回原图
         enhanced_gray = gray.copy()
@@ -97,7 +98,7 @@ def cal_rect_angle(rect,contour):
     if 0 <= angle <= 90:# 合法角度
         # 判断长宽比
         aspect_ratio = width / height
-        if 0.8 <= aspect_ratio <= 1.2:
+        if 0.85 <= aspect_ratio <= 1.15:
             # 长宽长度相近，以相机 x 轴为原点，角度归一化到 [-45, 45]
             angle = angle - 90 if angle > 45 else angle
         else :

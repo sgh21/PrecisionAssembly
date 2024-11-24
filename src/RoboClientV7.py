@@ -10,15 +10,12 @@ sys.path.append(workspace)
 from src.AuboControl import AuboController
 from src.EG24BControl import EG24BController
 from utils.transform import *
-from utils.config import NORM_Z
-ROBOTSTATE = {
-    'READY_TO_START': 0,
-    'GET_ALL_CUBE': 1,
-    'FINISH_CUBE0': 2,
-    'FINISH_CUBE1': 3,
-    'FINISH_CUBE2':4,
-    'FINISH_ALL':5,
-}
+from utils.config import NORM_Z,\
+                        AUBOHOST,\
+                        INITPOS,\
+                        INITORI,\
+                        ROBOTSTATE
+
 class RoboClient:
     def __init__(self, vision_host='localhost', vision_port=2024,aubo_host='192.168.70.100',aubo_port=8899,gripper_port=None):
         self.vision_host = vision_host
@@ -110,7 +107,7 @@ def main():
     import time
     vision_host = 'localhost'  # 使用回传地址
     vision_port = 2024  # 与服务器端保持一致
-    aubo_host = '192.168.70.100'
+    aubo_host = AUBOHOST
     aubo_port = 8899
     gripper_port = 'COM7'
     traget_pose = []
@@ -129,8 +126,8 @@ def main():
     client.aubo.robot.set_end_max_line_acc(a)
     client.aubo.robot.set_end_max_line_velc(v_normal)
     
-    init_pos = np.array([-0.43322,-0.131482,0.39424])
-    init_ori = np.array([180*np.pi/180,0,-90*np.pi/180])
+    init_pos = INITPOS
+    init_ori = INITORI
     client.aubo.movel_tf(pos=init_pos,ori=init_ori,frame_name='flange_center')
 
 
@@ -150,8 +147,9 @@ def main():
     modify_angle0 = client.receive_data()
     client.send_command('modify_angle1_true')
     modify_angle1 = client.receive_data()
-    cube0_ori_in_camera[2] += modify_angle0
-    cube1_ori_in_camera[2] += modify_angle1
+    cube0_ori_in_camera[2] += modify_angle0[0]
+    cube1_ori_in_camera[2] += modify_angle1[0]
+    
     trans_flag0 = cube0_ori_in_camera[2] < 0
     trans_flag1 = cube1_ori_in_camera[2] < 0
     trans_flag2 = cube2_ori_in_camera[2] < 0

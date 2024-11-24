@@ -159,7 +159,7 @@ def get_circle_data(num,aubo:AuboController,cam,data_buf,nPayloadSize):
         aubo.movel_tf(original_pos,original_ori,frame_name="camera_center")
         for i in range(9):
                 aubo.movel_relative(delta_pos,delta_ori,frame_name="camera_center")
-                capture_frame(cam,data_buf,nPayloadSize,f'{i+1+9*k}_1',targrt_dir='../dataset/circle',show = True)
+                capture_frame(cam,data_buf,nPayloadSize,f'{i+1+9*k+135}_1',targrt_dir='../dataset/circle',show = True)
         aubo.movel(pos,ori)
         time.sleep(5)
 if __name__ == "__main__":
@@ -183,8 +183,8 @@ if __name__ == "__main__":
     # delta_pos = [0.05,0.05,0.0]
     # deltal_ori = [0.0,10*np.pi/180,0.0]
     # get_dataset(1,pos,ori,aubo,cam,data_buf,nPayloadSize)
-    get_calib_data(aubo,cam,data_buf,nPayloadSize)
-    # get_circle_data(5,aubo,cam,data_buf,nPayloadSize)
+    # get_calib_data(aubo,cam,data_buf,nPayloadSize)
+    get_circle_data(5,aubo,cam,data_buf,nPayloadSize)
     # capture_frame(cam,data_buf,nPayloadSize,'template0',targrt_dir='../dataset/template',show = True)
     aubo.disconnect()
     close_device(cam, data_buf)

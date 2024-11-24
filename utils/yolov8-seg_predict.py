@@ -29,15 +29,45 @@ def yolo_predict(model,image,show = True):
         x1, y1, x2, y2 = boxes.xyxy[i].cpu().numpy().astype(int)
         x1, y1 = max(x1, 0), max(y1, 0)
         x2, y2 = min(x2, w-1), min(y2, h-1)
-    
+        
+       
+        # 计算掩膜面积
+        mask_area = (x2 - x1) * (y2 - y1)
+        print(f'掩膜面积：{mask_area}')
+        
+        # 计算框的中心位置
+        center_x = (x1 + x2) // 2
+        center_y = (y1 + y2) // 2
+        
         if show:
             cv2.namedWindow('dst', cv2.WINDOW_NORMAL)
-            cv2.resizeWindow('dst',1536,1024)
+            cv2.resizeWindow('dst', 1536, 1024)
             cv2.rectangle(img_result, (x1, y1), (x2, y2), color, 2)
-            cv2.imshow('dst',img_result)
+            # 在框的中心位置绘制掩膜面积
+            cv2.putText(img_result, f'Area: {mask_area}', (center_x, center_y), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+            cv2.imshow('dst', img_result)
             if cv2.waitKey(100) & 0xFF == ord('q'):
                 cv2.destroyWindow('dst')
                 return
+    # for i in range(len(boxes)):
+    #     print(f'检测到目标：{boxes.cls[i]}')
+    #     # 获取类别和颜色
+    #     cls = int(boxes.cls[i])
+    #     color = COLOR_DICT.get(cls, (255, 255, 255))
+
+    #     # 获取边界框坐标并转换为整数
+    #     x1, y1, x2, y2 = boxes.xyxy[i].cpu().numpy().astype(int)
+    #     x1, y1 = max(x1, 0), max(y1, 0)
+    #     x2, y2 = min(x2, w-1), min(y2, h-1)
+
+    #     if show:
+    #         cv2.namedWindow('dst', cv2.WINDOW_NORMAL)
+    #         cv2.resizeWindow('dst',1536,1024)
+    #         cv2.rectangle(img_result, (x1, y1), (x2, y2), color, 2)
+    #         cv2.imshow('dst',img_result)
+    #         if cv2.waitKey(100) & 0xFF == ord('q'):
+    #             cv2.destroyWindow('dst')
+    #             return
 
 def main(weights):
     # 初始化相机
@@ -56,6 +86,7 @@ def main(weights):
 
 
 if __name__ == "__main__":
-    weights = f"{workspace}/weights/yolov8-seg-for-circle.pt"
+    from utils.config import YOLO_MODEL_PATH_CIRCLE
+    weights = YOLO_MODEL_PATH_CIRCLE
     main(weights)
     

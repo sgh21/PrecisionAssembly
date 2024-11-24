@@ -10,15 +10,12 @@ sys.path.append(workspace)
 from src.AuboControl import AuboController
 from src.EG24BControl import EG24BController
 from utils.transform import *
-from utils.config import NORM_Z
-ROBOTSTATE = {
-    'READY_TO_START': 0,
-    'GET_ALL_CUBE': 1,
-    'FINISH_CUBE0': 2,
-    'FINISH_CUBE1': 3,
-    'FINISH_CUBE2':4,
-    'FINISH_ALL':5,
-}
+from utils.config import NORM_Z,\
+                        ROBOTSTATE,\
+                        AUBOHOST,\
+                        INITPOS,\
+                        INITORI
+
 
 class RoboClient:
     def __init__(self, vision_host='localhost', vision_port=2024,aubo_host='192.168.70.100',aubo_port=8899,gripper_port=None):
@@ -127,20 +124,20 @@ def main():
     import time
     vision_host = 'localhost'  # 使用回传地址
     vision_port = 2024  # 与服务器端保持一致
-    aubo_host = '192.168.70.100'
+    aubo_host = AUBOHOST
     aubo_port = 8899
     gripper_port = 'COM7'
     traget_pose = []
     client = RoboClient(vision_host, vision_port,aubo_host,aubo_port,gripper_port)
     client.aubo.robot.set_end_max_line_acc(0.1)
     client.aubo.robot.set_end_max_line_velc(0.12)
-    
-    Z_camera_ground = NORM_Z*1000+16 - 7# 16成像平面到地面的高度，5是夹爪中心到地面的距离
+    # 需要根据触碰标定，并更新camera_config.yaml中的NORM_Z
+    Z_camera_ground = NORM_Z*1000+16 - 7# 16成像平面到地面的高度，7是夹爪中心到地面的距离
     
     # init the robot pose
-    init_pos = np.array([-0.43322,-0.131482,0.39424])
+    init_pos = INITPOS
     # init_pos = np.array([-0.43322,-0.131482,0.368112])#法兰初始位姿，一定要改！！！
-    init_ori = np.array([180*np.pi/180,0,-90*np.pi/180])
+    init_ori = INITORI
     client.aubo.movel_tf(pos=init_pos,ori=init_ori,frame_name='flange_center')
     
     
@@ -153,7 +150,7 @@ def main():
     # if not check_all(response):
     #     raise ValueError('无法获取全部物块的位置，请检查相机视野')
     cube0_pos_in_camera , cube0_ori_in_camera = client.get_cube_pose(response,0)
-    
+
     # get the pos of cube 0
     client.aubo.movel_relative(cube0_pos_in_camera,cube0_ori_in_camera,frame_name='camera_center')
     time.sleep(1)#等待运动稳定
@@ -173,7 +170,7 @@ def main():
     cube0_ori_in_camera = rpy_to_quaternion(np.array(cube0_ori_in_camera))
     cube0_pos_in_camera , cube0_ori_in_camera = client.aubo.tf_tree.transform_pose(cube0_pos_in_camera,cube0_ori_in_camera,'camera_center','world')
     cube0_ori_in_camera = quaternion_to_rpy(np.array(cube0_ori_in_camera))
-
+    print("The ori of cube0 in world is:",cube0_ori_in_camera*180/np.pi)
     # 移动到物块0的位置，实现硬定位
     safe_dist = np.array([0,0,0.05])
     client.aubo.movel_tf(cube0_pos_in_camera + safe_dist,cube0_ori_in_camera,'gripper_center')

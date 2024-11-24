@@ -1,12 +1,13 @@
 # config.py
 import os 
 import sys
+import numpy as np
 current_dir = os.path.dirname(os.path.abspath(__file__))
 workspace = os.path.dirname(current_dir)
 sys.path.append(workspace)
 # 模型路径
 YOLO_MODEL_PATH = f'{workspace}/weights/yolov8-seg.pt'  # 替换为您的YOLOv8-Seg模型路径
-YOLO_MODEL_PATH_CIRCLE = f'{workspace}/weights/yolov8-seg-for-circle.pt'
+YOLO_MODEL_PATH_CIRCLE = f'{workspace}/weights/yolov8-seg-for-circle2.pt'#f'{workspace}/weights/yolov8-seg-for-circle.pt'
 CAMERA_CONFIG = f'{workspace}/config/camera_config.yaml'  # 相机配置文件路径
 template_dir = os.path.join(workspace, 'dataset/template')
 # 模板图像路径（根据类别索引）
@@ -24,12 +25,20 @@ COLOR_DICT = {
     3: (0,255,255),
     4: (255,255,0)
 }
-NORM_Z = 0.40015# 归一化高度 到标定板时0.39169 0.415803 0.403103 0.37874 0.4125701+0.00358 0.40015
-# ORB特征检测器参数
-ORB_FEATURES = 5000  # 特征点数量
+NORM_Z = 0.40215# 归一化高度 到标定板时0.39169 0.415803 0.403103 0.37874 0.4125701+0.00358 0.40015
 
-# 匹配点数量阈值
-MIN_MATCH_COUNT = 10
 
 # 其他参数
-THRESHOLD_VALUE = 127  # 二值化阈值
+THRESHOLD_VALUE = 105 # 二值化阈值
+AUBOHOST = '192.168.70.100'
+INITPOS = np.array([-0.43322,-0.131482,0.39424])
+INITORI = np.array([180*np.pi/180,0,-90*np.pi/180])
+
+ROBOTSTATE = {
+    'READY_TO_START': 0,
+    'GET_ALL_CUBE': 1,
+    'FINISH_CUBE0': 2,
+    'FINISH_CUBE1': 3,
+    'FINISH_CUBE2':4,
+    'FINISH_ALL':5,
+}

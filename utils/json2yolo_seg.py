@@ -24,7 +24,7 @@ def process_json_files(folder_path, output_path, image_width, image_height,seg =
     # 如果没有提供类别字典，初始化一个空字典
     if class_dict is None:
         class_dict = {}
-        class_id_counter = 3
+        class_id_counter = 4
 
     # 获取文件夹中的所有 JSON 文件
     json_files = [f for f in os.listdir(folder_path) if f.endswith('.json')]
@@ -111,7 +111,7 @@ if __name__ == "__main__":
 
     sys.path.append(workspace)
     # 设置您的 JSON 文件夹路径
-    folder_path = f"{workspace}/dataset/circle/0"
+    folder_path = f"{workspace}/dataset/circle/1"
     output_path = f"{workspace}/dataset/circle/labels"
     os.makedirs(output_path, exist_ok=True)
 

@@ -81,6 +81,8 @@ class AuboController:
         file_path = os.path.join(workspace,config_path)
         with open(file_path,"r") as f:
             camera_config = yaml.safe_load(f)
+            if "T_gripper1to2" not in camera_config:
+                return None
             T_gripper1to2 = np.array(camera_config["T_gripper1to2"])
             
             self.camera2flange_init = True
@@ -124,8 +126,9 @@ class AuboController:
             T_gripper1to2 = self.get_gripper1to2()
             tf_params["camera2flange"]["translation"] = camera2flange[:3,3]
             tf_params["camera2flange"]["rotation"] = R.from_matrix(camera2flange[:3,:3]).as_quat() 
-            tf_params["gripper1to2"]["translation"] = T_gripper1to2[:3,3]
-            tf_params["gripper1to2"]["rotation"] = R.from_matrix(T_gripper1to2[:3,:3]).as_quat()
+            if T_gripper1to2 is not None:
+                tf_params["gripper1to2"]["translation"] = T_gripper1to2[:3,3]
+                tf_params["gripper1to2"]["rotation"] = R.from_matrix(T_gripper1to2[:3,:3]).as_quat()
         print(tf_params['camera2flange'])
         if self.robot.connected:
             waypoint = self.get_current_waypoint()
@@ -251,12 +254,15 @@ class AuboController:
             self.tf_tree.update_node("flange_center",pos,ori)#[x,y,z,w]
             ori = standard_to_quaternion(ori) #[w,x,y,z]
             result = self.robot.inverse_kin(current_joint_state, pos,ori)
-            if result is not None:
+            if result is not None :
                 joint_radian = result['joint']
-                if joint == False:
-                    return self.robot.move_line(joint_radian)
-                else:
-                    return self.robot.move_joint(joint_radian)
+                if joint_radian[-1] <= 100/180*np.pi:
+                    if joint == False:
+                        return self.robot.move_line(joint_radian)
+                    else:
+                        return self.robot.move_joint(joint_radian)
+                else :
+                    raise ValueError("Dangerous angle!!!!!!")
             else:
                 raise ValueError("inverse kinematics failed.")
         except ValueError:

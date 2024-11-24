@@ -106,7 +106,21 @@ def is_close(a,b,threshold=5*np.pi/180):
         return True
     else:
         return False
+def spin_all(theta,step=4):
+    theta_list = []
+    for i in range(step):
+        theta_list.append(theta+i*2*np.pi/step)
+    for i,theta_obj in enumerate(theta_list):
+        theta_list[i] = theta_obj-2*np.pi if theta_obj > np.pi else theta_obj
+    return theta_list
 
+def get_close(theta_refer,theta_list):
+    theta_list = np.array(theta_list)
+    theta_delta_list = np.abs(theta_list.copy() - theta_refer)
+    min_index = np.argmin(theta_delta_list)
+
+    return min_index,theta_list[min_index]
+    
 def main():
     # 别问我为什么这个函数这么丑，问就是写到最后不想写了
     import time
@@ -123,9 +137,9 @@ def main():
     client.aubo.robot.set_joint_maxvelc(joint_maxvelc=(2.4, 2.4, 2.4, 2.4, 2.4, 2.4))
 
     # 在这里定义三个速度
-    a = 0.4
-    v_normal = 0.5 # 正常移动
-    v_spin = 0.6
+    a = 0.1
+    v_normal = 0.1 # 正常移动
+    v_spin = 0.2
     v_insert = 0.05 # 插入速度
     grasp_speed = 1000
     client.aubo.robot.set_end_max_line_acc(a)
@@ -148,26 +162,19 @@ def main():
     cube2_pos_in_camera , cube2_ori_in_camera = client.get_cube_pose(response,2)
     # modify the angle of cube0
     # if not nesscary, please comment the following code
+    # print("the ori in camera :",cube1_ori_in_camera[2]*180/np.pi)
     client.send_command('modify_angle0_true')
     modify_angle0 = client.receive_data()
     client.send_command('modify_angle1_true')
     modify_angle1 = client.receive_data()
-    cube0_ori_modify = cube0_ori_in_camera[2].copy()
-    cube1_ori_modify = cube1_ori_in_camera[2].copy()
-    print("The angle before modify",cube1_ori_modify)
-    if (is_close(cube0_ori_modify,45*np.pi/180) or is_close(cube0_ori_modify,-45*np.pi/180)):
-        if modify_angle0[1] == 0 and is_close(cube0_ori_modify,-45*np.pi/180):
-             modify_angle0[0] = np.pi/2
-        elif modify_angle0[1] == 1 and is_close(cube0_ori_modify,45*np.pi/180):
-            modify_angle0[0] = -np.pi/2
-    if (is_close(cube1_ori_modify,45*np.pi/180) or is_close(cube1_ori_modify,-45*np.pi/180)):
-        if modify_angle1[1] == 0 and is_close(cube1_ori_modify,-45*np.pi/180):
-             modify_angle1[0] = np.pi/2
-        elif modify_angle1[1] == 1 and is_close(cube1_ori_modify,45*np.pi/180):
-            modify_angle1[0] = -np.pi/2
-    cube0_ori_in_camera[2] += modify_angle0[0]
-    cube1_ori_in_camera[2] += modify_angle1[0]
-    print("The angle after modify",cube1_ori_in_camera[2])
+    # print("the modify angle is :",modify_angle1*180/np.pi)
+    cube0_ori_list = spin_all(cube0_ori_in_camera[2],step=4)
+    cube1_ori_list = spin_all(cube1_ori_in_camera[2],step=4)
+    # print("the modify list is:",cube1_ori_list)
+    cube0_ori_in_camera[2] = get_close(modify_angle0,cube0_ori_list)[1]
+    cube1_ori_in_camera[2] = get_close(modify_angle1,cube1_ori_list)[1]
+    # print("the ori after modify in camera :",cube1_ori_in_camera[2]*180/np.pi)
+    
     trans_flag0 = cube0_ori_in_camera[2] < 0
     trans_flag1 = cube1_ori_in_camera[2] < 0
     trans_flag2 = cube2_ori_in_camera[2] < 0
